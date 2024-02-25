@@ -59,8 +59,8 @@ class SimpleStyle extends BuiltInStyle {
   @override
   BorderSide borderSide(BuildContext context) {
     return const BorderSide(
-      color: Color(0xffEBEBEB),
-      width: 1.5,
+      color: Colors.transparent,
+      width: 0.0,
     );
   }
 
