@@ -9,6 +9,7 @@
 .history
 .svn/
 migrate_working_dir/
+coverage/
 
 # IntelliJ related
 *.iml
@@ -30,6 +31,11 @@ migrate_working_dir/
 build/
 
 # fvm 
-.fvm/flutter_sdk
 
 .vscode
+
+# FVM Version Cache
+.fvm/
+
+# Lab
+/lab

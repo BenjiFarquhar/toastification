@@ -4,6 +4,7 @@ import 'package:example/src/features/home/views/ui_states/extra.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:toastification/toastification.dart';
 
 class BottomNavigationView extends ConsumerStatefulWidget {
   const BottomNavigationView({super.key});
@@ -141,18 +142,42 @@ class _BottomNavigationViewState extends ConsumerState<BottomNavigationView>
           padding: edgeInsets,
           minimumSize: size,
         ),
-        onPressed: () {},
-        label: const Text('Save My Toast'),
-        icon: const Icon(Iconsax.save_add_copy, size: 20),
+        onPressed: () {
+          ref.read(toastDetailControllerProvider.notifier).clearState(true);
+        },
+        label: const Text('Reset State'),
+        icon: const Icon(Iconsax.refresh_copy, size: 20),
       ),
       tablet: TextButton(
         style: TextButton.styleFrom(
           padding: const EdgeInsets.all(0),
           minimumSize: size,
-          backgroundColor: theme.colorScheme.surface,
+          backgroundColor: theme.colorScheme.surfaceContainerHigh,
           foregroundColor: theme.colorScheme.onSurface,
         ),
-        onPressed: () {},
+        onPressed: () {
+          final toastDetail = ref.read(toastDetailControllerProvider);
+
+          showCurrentToast(
+            context,
+            toastDetail.copyWith(
+              closeButton: ToastCloseButton(
+                showType: toastDetail.closeButton.showType,
+                buttonBuilder: (context, onClose) {
+                  return OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: edgeInsets,
+                      minimumSize: size,
+                    ),
+                    onPressed: onClose,
+                    icon: const Icon(Iconsax.monitor_copy, size: 20),
+                    label: const Text('Preview on Screen'),
+                  );
+                },
+              ),
+            ),
+          );
+        },
         child: const Icon(Iconsax.save_add_copy, size: 20),
       ),
     );
@@ -181,34 +206,38 @@ class _BottomNavigationViewState extends ConsumerState<BottomNavigationView>
       ),
     );
 
-    return SlideTransition(
-      position: animation,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 32),
-          padding: containerPadding,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.black.withOpacity(.15)),
-            boxShadow: [
-              BoxShadow(
-                color: theme.colorScheme.onSurface.withOpacity(.1),
-                blurRadius: 48,
-                offset: const Offset(0, 24),
-              )
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              previewButton,
-              const SizedBox(width: 16),
-              saveToastButton,
-              const SizedBox(width: 16),
-              copyCodeButton,
-            ],
+    return SizedBox(
+      height: 150,
+      child: SlideTransition(
+        position: animation,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 32),
+            padding: containerPadding,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.black.withValues(alpha: .15)),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.onSurface.withValues(alpha: .1),
+                  blurRadius: 48,
+                  offset: const Offset(0, 24),
+                )
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                previewButton,
+                const SizedBox(width: 16),
+                saveToastButton,
+                const SizedBox(width: 16),
+                copyCodeButton,
+              ],
+            ),
           ),
         ),
       ),

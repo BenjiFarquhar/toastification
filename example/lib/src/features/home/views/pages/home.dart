@@ -9,7 +9,6 @@ import 'package:example/src/features/home/views/widgets/image.dart';
 import 'package:example/src/features/home/views/widgets/preview_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
-import 'package:toastification/toastification.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,21 +32,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ToastificationConfigProvider(
-      config: ToastificationConfig(
-        marginBuilder: (alignment) => const EdgeInsets.fromLTRB(0, 16, 0, 110),
-      ),
-      child: const Scrollbar(
-        child: Scaffold(
-          extendBody: true,
-          bottomNavigationBar: BottomNavigationView(),
-          body: CustomScrollView(
-            primary: true,
-            slivers: [
-              ToastAppBar(),
-              SliverToBoxAdapter(child: ToastHeader()),
-              CustomizationSection(),
-            ],
+    return Scrollbar(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: kMaxWidth),
+          child: Scaffold(
+            extendBody: true,
+            bottomNavigationBar: const BottomNavigationView(),
+            body: CustomScrollView(
+              scrollBehavior: const ScrollBehavior().copyWith(
+                scrollbars: false,
+              ),
+              primary: true,
+              slivers: const [
+                ToastAppBar(),
+                SliverToBoxAdapter(child: ToastHeader()),
+                CustomizationSection(),
+              ],
+            ),
           ),
         ),
       ),
@@ -69,9 +71,7 @@ class CustomizationSection extends StatelessWidget {
 }
 
 class _HorizontalSection extends StatelessWidget {
-  const _HorizontalSection({
-    Key? key,
-  }) : super(key: key);
+  const _HorizontalSection();
 
   @override
   Widget build(BuildContext context) {

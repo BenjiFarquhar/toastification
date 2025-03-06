@@ -4,7 +4,6 @@ import 'package:example/src/core/views/widgets/picker/icon/icon_tile.dart';
 import 'package:example/src/features/home/controllers/toast_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:toastification/toastification.dart';
 
 class IconPicker extends ConsumerStatefulWidget {
@@ -30,17 +29,27 @@ class _IconPickerState extends ConsumerState<IconPicker> {
     final style = ref.watch(
       toastDetailControllerProvider.select((value) => value.style),
     );
+    final primaryColor = ref.watch(
+      toastDetailControllerProvider.select((value) => value.primaryColor),
+    );
+    final backgroundColor = ref.watch(
+      toastDetailControllerProvider.select((value) => value.backgroundColor),
+    );
+    final foregroundColor = ref.watch(
+      toastDetailControllerProvider.select((value) => value.foregroundColor),
+    );
 
-    final iconColor = ref.watch(toastDetailControllerProvider).primaryColor;
     final icon = ref.watch(toastDetailControllerProvider).icon;
-
-    final defaultStyle = switch (style) {
-      ToastificationStyle.minimal => MinimalStyle(type),
-      ToastificationStyle.fillColored => FilledStyle(type),
-      ToastificationStyle.flatColored => FlatColoredStyle(type),
-      ToastificationStyle.flat => FlatStyle(type),
-      ToastificationStyle.simple => SimpleStyle(type),
-    };
+    final defaultStyle = StandardToastStyleFactory.createStyle(
+      style: style.toStandard,
+      type: type,
+      flutterTheme: Theme.of(context),
+      providedValues: StandardStyleValues(
+        primaryColor: primaryColor?.toMaterialColor,
+        surfaceLight: backgroundColor,
+        surfaceDark: foregroundColor,
+      ),
+    );
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -54,7 +63,7 @@ class _IconPickerState extends ConsumerState<IconPicker> {
         elevation: 0,
         padding: EdgeInsets.zero,
         enabled: true,
-        color: Theme.of(context).colorScheme.background,
+        color: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: BorderSide(
@@ -70,8 +79,8 @@ class _IconPickerState extends ConsumerState<IconPicker> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                icon?.iconData ?? Iconsax.tick_circle_copy,
-                color: iconColor ?? defaultStyle.iconColor(context),
+                icon?.iconData ?? defaultStyle.icon,
+                color: defaultStyle.iconColor,
               ),
               const SizedBox(width: 8),
               const Text('Icon'),
@@ -91,7 +100,7 @@ class _IconPickerState extends ConsumerState<IconPicker> {
             padding: EdgeInsets.zero,
             child: Center(
               child: IconPickerWidget(
-                iconColor: iconColor ?? defaultStyle.iconColor(context),
+                iconColor: defaultStyle.iconColor,
               ),
             ),
           )

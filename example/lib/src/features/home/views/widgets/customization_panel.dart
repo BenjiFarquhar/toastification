@@ -138,7 +138,7 @@ class CustomizeTitle extends StatelessWidget {
               mobile: 14,
             ),
             fontWeight: FontWeight.w500,
-            color: titleColor.withOpacity(.4),
+            color: titleColor.withValues(alpha: .4),
             height: 1.2,
           ),
         ),
@@ -333,17 +333,21 @@ class _StyleSection extends ConsumerWidget {
       toastDetailControllerProvider.select((value) => value.style),
     );
 
-    final builtInStyle = BuiltInStyle.fromToastificationStyle(style, type);
+    final builtInStyle = StandardToastStyleFactory.createStyle(
+      style: style.toStandard,
+      type: type,
+      flutterTheme: Theme.of(context),
+    );
 
     Color primaryColor = ref.watch(toastDetailControllerProvider
             .select((value) => value.primaryColor)) ??
-        builtInStyle.primaryColor(context);
+        builtInStyle.primaryColor;
     Color backgroundColor = ref.watch(toastDetailControllerProvider
             .select((value) => value.backgroundColor)) ??
-        builtInStyle.backgroundColor(context);
+        builtInStyle.backgroundColor;
     Color foregroundColor = ref.watch(toastDetailControllerProvider
             .select((value) => value.foregroundColor)) ??
-        builtInStyle.foregroundColor(context);
+        builtInStyle.foregroundColor;
 
     return SubSection(
       title: 'STYLE',
@@ -493,13 +497,12 @@ class _SystemSection extends ConsumerWidget {
             rowFit: FlexFit.tight,
             columnFit: FlexFit.loose,
             child: ToggleTile(
-              title: 'Newest on top',
-              value: ref.watch(toastDetailControllerProvider).newestOnTop,
-              soon: true,
+              title: 'Use BuildContext - Recommended',
+              value: ref.watch(toastDetailControllerProvider).useContext,
               onChanged: (value) {
                 ref
                     .read(toastDetailControllerProvider.notifier)
-                    .changeNewestOnTop(value!);
+                    .changeUseContext(value!);
               },
             ),
           ),
@@ -561,12 +564,13 @@ class _CloseSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    final closeButtonShowType = ref.watch(
+    final closeButton = ref.watch(
       toastDetailControllerProvider.select(
-        (value) => value.closeButtonShowType,
+        (value) => value.closeButton,
       ),
     );
+
+    final closeButtonShowType = closeButton.showType;
 
     return SubSection(
       title: 'CLOSE',
@@ -632,10 +636,11 @@ class _CloseSection extends ConsumerWidget {
                   );
                 },
               ).toList(),
-              onChanged: (value) {
+              onChanged: (closeType) {
                 ref
                     .read(toastDetailControllerProvider.notifier)
-                    .changeCloseButtonShowType(value!);
+                    .changeCloseButton(
+                        closeButton.copyWith(showType: closeType));
               },
             ),
           ),
@@ -690,7 +695,7 @@ class _ProgressBarSection extends ConsumerWidget {
               title: 'Timeout',
               icon: Icon(
                 Iconsax.timer_1_copy,
-                color: theme.colorScheme.onSurface.withOpacity(.2),
+                color: theme.colorScheme.onSurface.withValues(alpha: .2),
               ),
               value: timeoutValue,
               valueSuffix: 's',

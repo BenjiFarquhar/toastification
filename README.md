@@ -1,4 +1,6 @@
-# Toastification [![pub package](https://img.shields.io/pub/v/toastification?color=blue&style=plastic)](https://pub.dartlang.org/packages/toastification)
+# Toastification 
+
+[![pub package](https://img.shields.io/pub/v/toastification?color=blue&style=plastic)](https://pub.dartlang.org/packages/toastification) [![codecov](https://codecov.io/gh/payam-zahedi/toastification/graph/badge.svg?token=UTQX773WXM)](https://codecov.io/gh/payam-zahedi/toastification)
 
 <p align="left">
 <img src="https://github.com/payam-zahedi/toastification/blob/main/doc/image/intro.png?raw=true" width="100%" alt="Styles" />
@@ -43,6 +45,18 @@ before we dive into the details, you should know that you can use Toastification
 
 you can either use the 'toastification' instance or 'Toastification()' constructor to access the methods.
 
+## Usage without context
+
+If you want to display toast messages without using `context`, wrap your AppWidget with `ToastificationWrapper` like this:
+
+```dart
+return ToastificationWrapper(
+  child: MaterialApp(),
+);
+```
+
+And now you can use both `toastification.show` and `toastification.showCustom` without providing `context`.
+
 ## Show Method
 
 by using the `show` method, you can show predefined toast messages. you can use the `ToastificationType` enum to choose the type and `ToastificationStyle` enum to choose the style of the toast message.
@@ -53,7 +67,7 @@ by using the `show` method, you can show predefined toast messages. you can use 
 
 ```dart
 toastification.show(
-  context: context,
+  context: context, // optional if you use ToastificationWrapper
   title: Text('Hello, world!'),
   autoCloseDuration: const Duration(seconds: 5),
 );
@@ -65,7 +79,7 @@ You can customize the appearance of the toast message by passing in additional p
 
 ```dart
 toastification.show(
-  context: context,
+  context: context, // optional if you use ToastificationWrapper
   type: ToastificationType.success,
   style: ToastificationStyle.flat,
   autoCloseDuration: const Duration(seconds: 5),
@@ -82,6 +96,7 @@ toastification.show(
     );
   },
   icon: const Icon(Icons.check),
+  showIcon: true, // show or hide the icon
   primaryColor: Colors.green,
   backgroundColor: Colors.white,
   foregroundColor: Colors.black,
@@ -97,7 +112,16 @@ toastification.show(
     )
   ],
   showProgressBar: true,
-  closeButtonShowType: CloseButtonShowType.onHover,
+  closeButton: ToastCloseButton(
+    showType: CloseButtonShowType.onHover,
+    buttonBuilder: (context, onClose) {
+      return OutlinedButton.icon(
+        onPressed: onClose,
+        icon: const Icon(Icons.close, size: 20),
+        label: const Text('Close'),
+      );
+    },
+  ),
   closeOnClick: false,
   pauseOnHover: true,
   dragToClose: true,
@@ -113,13 +137,30 @@ toastification.show(
 
 ### ToastificationStyle
 
-we have 4 predefined styles for toast messages:
+We have 5 predefined styles for toast messages, each offering a unique look and feel to match your application's design. Here's a breakdown of each style:
 
 <p align="left">
 <img src="https://github.com/payam-zahedi/toastification/blob/main/doc/image/styles.png?raw=true" width="100%" alt="Styles" />
 </p>
 
-additionally, we added a `ToastificationStyle.simple` style to show a simple toast message with a single line of text.
+1. **ToastificationStyle.flat**
+
+   - A simple and clean style with a subtle border and no background fill. Ideal for minimalist notifications that don't overwhelm the interface.
+
+2. **ToastificationStyle.fillColored**
+
+   - A bold style with a solid colored background. Perfect for high-visibility alerts or important notifications that need immediate attention.
+
+3. **ToastificationStyle.flatColored**
+
+   - A balanced style with a flat design, colored borders, and text, but without a solid fill. Great for notifications that need to stand out without being too bold.
+
+4. **ToastificationStyle.minimal**
+
+   - A sleek and modern design with minimal elements and an accent line denoting the notification type. Perfect for clean, distraction-free interfaces.
+
+5. **ToastificationStyle.simple**
+   - A straightforward style showing a single line of text. Best for short, simple messages or confirmations where minimal design is preferred.
 
 ## ShowCustom Method
 
@@ -131,7 +172,7 @@ Here's an example of how to use showCustom() to create a custom toast message wi
 
 ```dart
 toastification.showCustom(
-  context: context,
+  context: context, // optional if you use ToastificationWrapper
   autoCloseDuration: const Duration(seconds: 5),
   alignment: Alignment.topRight,
   builder: (BuildContext context, ToastificationItem holder) {
@@ -170,6 +211,48 @@ toastification.showCustom(
 ```
 
 With showCustom(), you're only limited by your imagination. Create a toast message that stands out from the crowd and adds a touch of personality to your app!
+
+### Using GlobalNavigatorKey
+
+If you need to show toasts from places where you don't have access to the BuildContext, you can use a GlobalNavigatorKey. This is particularly handy when you are using frameworks like GetX, where you don't have access to `context`.
+
+First, create a GlobalNavigatorKey:
+‍‍
+
+```dart
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+```
+
+Then, assign it to your MaterialApp:
+
+```dart
+MaterialApp(
+  navigatorKey: navigatorKey,
+  // ... other properties
+)
+```
+
+Now you can `show` toasts using the overlayState from the navigatorKey:
+
+```dart
+toastification.show(
+  overlayState: navigatorKey.currentState?.overlay,
+  autoCloseDuration: const Duration(seconds: 5),
+  title: Text('Hello, World!'),
+);
+```
+
+If you want to use `showCustom` instead, you can use it like this:
+
+```dart
+toastification.showCustom(
+  overlayState: navigatorKey.currentState?.overlay,
+  autoCloseDuration: const Duration(seconds: 5),
+  builder: (BuildContext context, ToastificationItem holder) {
+     // Your custom toast widget
+  },
+);
+```
 
 ## Custom Animations
 
@@ -255,7 +338,7 @@ In addition to displaying toast messages, the Toastification package also provid
 
 #### Find a Notification item
 
-Find a notification with the given ID
+Find a notification with the given ID.
 
 ```dart
 final notification = toastification.findToastificationItem('my_notification_id');
@@ -283,6 +366,32 @@ Remove a notification with the given ID from the screen.
 toastification.dismissById('my_notification_id');
 ```
 
+#### Dismiss All Notifications
+
+Remove all notifications that are currently displayed on the screen.
+
+```dart
+toastification.dismissAll(delayForAnimation: true);
+```
+
+You can customize the dismissal behavior by setting the `delayForAnimation` parameter. If set to `true`, Toastification will wait for the animation to finish before dismissing all notifications. If set to `false`, the notifications will be dismissed immediately without waiting for the animation.
+
+#### Dismiss First Notification
+
+Remove the first notification from the screen.
+
+```dart
+toastification.dismissFirst();
+```
+
+#### Dismiss Last Notification
+
+Remove the last notification from the screen.
+
+```dart
+toastification.dismissLast();
+```
+
 ## Design
 
 Toastification was redesigned by [Sepide Moqadasi](https://sepide.design/). We want to extend our heartfelt appreciation to Sepide for her exceptional design work, which has made Toastification visually appealing and user-friendly. Special thanks to Sepide for her valuable contributions to this project.
@@ -305,7 +414,7 @@ Toastification was redesigned by [Sepide Moqadasi](https://sepide.design/). We w
 
 Contributions are always welcome! If you have any suggestions, bug reports, or feature requests, please open an issue on the GitHub repository.
 
-If you would like to contribute to the project, please read the [CONTRIBUTING.md](https://github.com/payam-zahedi/toastification/CONTRIBUTING.md "CONTRIBUTING.md") file for more information on how to contribute.
+If you would like to contribute to the project, please read the [CONTRIBUTING.md](https://github.com/payam-zahedi/toastification/blob/main/CONTRIBUTING.md "CONTRIBUTING.md") file for more information on how to contribute.
 
 ## License
 

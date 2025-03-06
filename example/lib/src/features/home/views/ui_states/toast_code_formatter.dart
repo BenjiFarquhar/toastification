@@ -1,28 +1,35 @@
 import 'package:dart_style/dart_style.dart';
 import 'package:example/src/features/home/views/ui_states/animation_type.dart';
 import 'package:example/src/features/home/views/ui_states/toast_detail_ui_state.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
 class ToastCodeFormatter {
-  static final _formatter = DartFormatter(lineEnding: '\n\t');
+  static final _formatter = DartFormatter(
+    languageVersion: DartFormatter.latestLanguageVersion,
+    lineEnding: '\n\t',
+  );
 
   static String format(ToastDetail toastDetail) {
     final StringBuffer code = StringBuffer();
 
-    code.write('''
-    toastification.show(
-    context: context,
-    type: ${toastDetail.type},
-    style: ${toastDetail.style},
-  ''');
+    code.writeln('toastification.show(');
+
+    if (toastDetail.useContext) {
+      code.writeln('context: context,');
+    }
+
+    code.writeln('type: ${toastDetail.type},');
+    code.writeln('style: ${toastDetail.style},');
 
     if (toastDetail.title != null) {
-      code.writeln('\ttitle: ${toastDetail.title},');
+      code.writeln('\ttitle: Text("${(toastDetail.title as Text).data}"),');
     }
 
     if (toastDetail.description != null) {
-      code.writeln('\tdescription: ${toastDetail.description},');
+      code.writeln(
+          '\tdescription: Text("${(toastDetail.description as Text).data}"),');
     }
 
     code.writeln('\talignment: ${toastDetail.alignment},');
@@ -55,15 +62,18 @@ class ToastCodeFormatter {
     }
 
     if (toastDetail.primaryColor != null) {
-      code.writeln('\tprimaryColor: ${toastDetail.primaryColor},');
+      code.writeln(
+          '\tprimaryColor: Color(0x${toastDetail.primaryColor!.hexAlpha}),');
     }
 
     if (toastDetail.backgroundColor != null) {
-      code.writeln('\tbackgroundColor: ${toastDetail.backgroundColor},');
+      code.writeln(
+          '\tbackgroundColor: Color(0x${toastDetail.backgroundColor!.hexAlpha}),');
     }
 
     if (toastDetail.foregroundColor != null) {
-      code.writeln('\tforegroundColor: ${toastDetail.foregroundColor},');
+      code.writeln(
+          '\tforegroundColor: Color(0x${toastDetail.foregroundColor!.hexAlpha}),');
     }
 
     if (toastDetail.iconColor != null) {
@@ -90,9 +100,9 @@ class ToastCodeFormatter {
       code.writeln('\tdirection: ${toastDetail.direction},');
     }
 
-    if (toastDetail.closeButtonShowType != CloseButtonShowType.always) {
+    if (toastDetail.closeButton.showType != CloseButtonShowType.always) {
       code.writeln(
-        '\tcloseButtonShowType: ${toastDetail.closeButtonShowType.toValueString()},',
+        '\tcloseButton: ToastCloseButton(showType: ${toastDetail.closeButton.showType.toValueString()}),',
       );
     }
 
@@ -109,6 +119,9 @@ class ToastCodeFormatter {
 
     if (toastDetail.applyBlurEffect == true) {
       code.writeln('\tapplyBlurEffect: ${toastDetail.applyBlurEffect},');
+    }
+    if (toastDetail.showIcon == false) {
+      code.writeln('\tshowIcon: ${toastDetail.showIcon},');
     }
 
     code.write(');');

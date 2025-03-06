@@ -2,10 +2,22 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
-const _defaultAlignment = AlignmentDirectional.topEnd;
-const _itemAnimationDuration = Duration(milliseconds: 600);
-const _defaultWidth = 400.0;
-const _defaultMargin = EdgeInsets.symmetric(vertical: 32);
+@visibleForTesting
+const defaultAlignment = AlignmentDirectional.topEnd;
+
+@visibleForTesting
+const defaultItemAnimationDuration = Duration(milliseconds: 600);
+
+@visibleForTesting
+const defaultWidth = 400.0;
+
+@visibleForTesting
+const defaultClipBehavior = Clip.none;
+
+typedef ToastificationMarginBuilder = EdgeInsetsGeometry Function(
+  BuildContext context,
+  AlignmentGeometry alignment,
+);
 
 /// you can use [ToastificationConfig] class to change default values of [Toastification]
 ///
@@ -19,33 +31,75 @@ const _defaultMargin = EdgeInsets.symmetric(vertical: 32);
 ///
 class ToastificationConfig extends Equatable {
   const ToastificationConfig({
-    this.alignment = _defaultAlignment,
-    this.itemWidth = _defaultWidth,
-    this.animationDuration = _itemAnimationDuration,
-    this.animationBuilder = _defaultAnimationBuilderConfig,
-    this.marginBuilder = _defaultMarginBuilder,
+    this.alignment = defaultAlignment,
+    this.itemWidth = defaultWidth,
+    this.clipBehavior = defaultClipBehavior,
+    this.animationDuration = defaultItemAnimationDuration,
+    this.animationBuilder = defaultAnimationBuilderConfig,
+    this.marginBuilder = defaultMarginBuilder,
+    this.applyMediaQueryViewInsets = true,
+    this.maxToastLimit = 10,
+    this.maxTitleLines = 2,
+    this.maxDescriptionLines = 6,
   });
 
   final AlignmentGeometry alignment;
   final double itemWidth;
+
+  /// The ClipBehavior of [AnimatedList], used as entry point for all [ToastificationItem]s' widgets under the hood. The default value is [Clip.none].
+  final Clip clipBehavior;
+
+  /// The duration of the animation for [ToastificationItem]s. The default value is 600 milliseconds.
   final Duration animationDuration;
+
   final ToastificationAnimationBuilder animationBuilder;
-  final EdgeInsetsGeometry Function(AlignmentGeometry alignment) marginBuilder;
+
+  /// Builder method for creating margin for Toastification Overlay.
+  final ToastificationMarginBuilder marginBuilder;
+
+  /// The maximum number of toasts that can be displayed at the same time.
+  /// If the number of toasts exceeds this limit, the oldest toast will be removed.
+  /// The default value is 10.
+  final int maxToastLimit;
+
+  /// The maximum number of lines to display for the toast title.
+  /// If the title exceeds this number of lines, it will be truncated with an ellipsis.
+  /// The default value is 2.
+  final int maxTitleLines;
+
+  /// The maximum number of lines to display for the toast description.
+  /// If the description exceeds this number of lines, it will be truncated with an ellipsis.
+  /// The default value is 2.
+  final int maxDescriptionLines;
+
+  /// Whether to apply the viewInsets to the margin of the Toastification Overlay.
+  /// Basically, this is used to move the Toastification Overlay up or down when the keyboard is shown.
+  /// So Toast overlay will not be hidden by the keyboard when the keyboard is shown.
+  ///
+  /// If set to true, MediaQuery.of(context).viewInsets will be added to the result of the [marginBuilder] method.
+  final bool applyMediaQueryViewInsets;
 
   // Copy with method for ToastificationConfig
   ToastificationConfig copyWith({
     AlignmentGeometry? alignment,
     double? itemWidth,
+    Clip? clipBehavior,
     Duration? animationDuration,
     ToastificationAnimationBuilder? animationBuilder,
-    EdgeInsetsGeometry Function(AlignmentGeometry alignment)? marginBuilder,
+    ToastificationMarginBuilder? marginBuilder,
+    int? maxToastLimit,
+    bool? applyMediaQueryViewInsets,
   }) {
     return ToastificationConfig(
       alignment: alignment ?? this.alignment,
       itemWidth: itemWidth ?? this.itemWidth,
+      clipBehavior: clipBehavior ?? this.clipBehavior,
       animationDuration: animationDuration ?? this.animationDuration,
       animationBuilder: animationBuilder ?? this.animationBuilder,
       marginBuilder: marginBuilder ?? this.marginBuilder,
+      maxToastLimit: maxToastLimit ?? this.maxToastLimit,
+      applyMediaQueryViewInsets:
+          applyMediaQueryViewInsets ?? this.applyMediaQueryViewInsets,
     );
   }
 
@@ -53,13 +107,19 @@ class ToastificationConfig extends Equatable {
   List<Object?> get props => [
         alignment,
         itemWidth,
+        clipBehavior,
         animationDuration,
         marginBuilder,
+        maxToastLimit,
+        maxTitleLines,
+        maxDescriptionLines,
+        applyMediaQueryViewInsets,
       ];
 }
 
 /// Default animation builder for [Toastification]
-Widget _defaultAnimationBuilderConfig(
+@visibleForTesting
+Widget defaultAnimationBuilderConfig(
   BuildContext context,
   Animation<double> animation,
   Alignment alignment,
@@ -73,6 +133,16 @@ Widget _defaultAnimationBuilderConfig(
 }
 
 /// Default margin builder for [Toastification]
-EdgeInsetsGeometry _defaultMarginBuilder(AlignmentGeometry alignment) {
-  return _defaultMargin;
+@visibleForTesting
+EdgeInsetsGeometry defaultMarginBuilder(
+  BuildContext context,
+  AlignmentGeometry alignment,
+) {
+  final y = alignment.resolve(Directionality.of(context)).y;
+
+  return switch (y) {
+    <= -0.5 => const EdgeInsets.only(top: 12),
+    >= 0.5 => const EdgeInsets.only(bottom: 12),
+    _ => EdgeInsets.zero,
+  };
 }

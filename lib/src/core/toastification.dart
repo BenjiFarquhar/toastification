@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:toastification/src/core/toastification_manager.dart';
-import 'package:toastification/src/widget/built_in/built_in_builder.dart';
+import 'package:toastification/src/core/toastification_overlay_state.dart';
+import 'package:toastification/src/built_in/built_in_builder.dart';
 import 'package:toastification/toastification.dart';
 
 // TODO(payam): add navigator observer
@@ -13,7 +15,7 @@ import 'package:toastification/toastification.dart';
 ///
 /// ```dart
 /// toastification.show(
-///   context: context,
+///   context: context, // optional if ToastificationWrapper is in widget tree
 ///   alignment: Alignment.topRight,
 ///   title: Text('Hello World'),
 ///   description: Text('This is a notification'),
@@ -29,7 +31,7 @@ import 'package:toastification/toastification.dart';
 ///
 /// ```dart
 /// toastification.showCustom(
-///   context: context,
+///   context: context, // optional if ToastificationWrapper is in widget tree
 ///   alignment: Alignment.topRight,
 ///   animationDuration: Duration(milliseconds: 500),
 ///   autoCloseDuration: Duration(seconds: 3),
@@ -48,7 +50,7 @@ final toastification = Toastification();
 ///
 /// ```dart
 /// Toastification().show(
-///   context: context,
+///   context: context, // optional if ToastificationWrapper is in widget tree
 ///   alignment: Alignment.topRight,
 ///   title: Text('Hello World'),
 ///   description: Text('This is a notification'),
@@ -64,7 +66,7 @@ final toastification = Toastification();
 ///
 /// ```dart
 /// Toastification().showCustom(
-///   context: context,
+///   context: context, // optional if ToastificationWrapper is in widget tree
 ///   alignment: Alignment.topRight,
 ///   animationDuration: Duration(milliseconds: 500),
 ///   autoCloseDuration: Duration(seconds: 3),
@@ -85,7 +87,8 @@ class Toastification {
   /// list of managers for each [Alignment] object
   ///
   /// for each [Alignment] object we will create a [ToastificationManager]
-  final Map<Alignment, ToastificationManager> _managers = {};
+  @visibleForTesting
+  final Map<Alignment, ToastificationManager> managers = {};
 
   /// shows a custom notification
   ///
@@ -100,7 +103,7 @@ class Toastification {
   ///
   /// ```dart
   /// toastification.showCustom(
-  ///   context: context,
+  ///   context: context, // optional if ToastificationWrapper is in widget tree
   ///   alignment: Alignment.topRight,
   ///   animationDuration: Duration(milliseconds: 500),
   ///   autoCloseDuration: Duration(seconds: 3),
@@ -110,7 +113,7 @@ class Toastification {
   /// );
   /// ```
   ToastificationItem showCustom({
-    required BuildContext context,
+    BuildContext? context,
     AlignmentGeometry? alignment,
     TextDirection? direction,
     required ToastificationBuilder builder,
@@ -121,15 +124,35 @@ class Toastification {
     DismissDirection? dismissDirection,
     ToastificationCallbacks callbacks = const ToastificationCallbacks(),
   }) {
-    direction ??= Directionality.of(context);
+    context ??= overlayState?.context;
 
-    final config = ToastificationConfigProvider.maybeOf(context)?.config ??
+    final contextProvided = context?.mounted == true;
+
+    if (contextProvided) {
+      direction ??= Directionality.of(context!);
+      overlayState ??= Overlay.maybeOf(context!, rootOverlay: true);
+    }
+
+    /// if context isn't provided
+    /// or the overlay can't be found in the provided context
+    ToastificationOverlayState? toastificationOverlayState;
+    if (overlayState == null) {
+      toastificationOverlayState = findToastificationOverlayState();
+      overlayState = toastificationOverlayState.overlayState;
+    }
+
+    /// find the config from the context or use the global config
+    final ToastificationConfig config = (contextProvided
+            ? ToastificationConfigProvider.maybeOf(context!)?.config
+            : toastificationOverlayState?.globalConfig) ??
         const ToastificationConfig();
+
+    direction ??= TextDirection.ltr;
 
     final effectiveAlignment =
         (alignment ?? config.alignment).resolve(direction);
 
-    final manager = _managers.putIfAbsent(
+    final manager = managers.putIfAbsent(
       effectiveAlignment,
       () => ToastificationManager(
         alignment: effectiveAlignment,
@@ -138,15 +161,18 @@ class Toastification {
     );
 
     return manager.showCustom(
-      context: context,
       builder: builder,
+      scheduler: SchedulerBinding.instance,
       animationBuilder: animationBuilder,
       animationDuration: animationDuration,
       autoCloseDuration: autoCloseDuration,
-      overlayState: overlayState,
+      overlayState: overlayState!,
       callbacks: callbacks,
     );
   }
+
+  @Deprecated(
+      'use show or showCustom method instead, and you can pass the OverlayState as a parameter')
 
   /// using this method you can show a notification by using the [navigator] overlay
   /// you should create your own widget and pass it to the [builder] parameter
@@ -202,7 +228,7 @@ class Toastification {
   ///
   /// ```dart
   /// toastification.show(
-  ///   context: context,
+  ///   context: context, // optional if ToastificationWrapper is in widget tree
   ///   alignment: Alignment.topRight,
   ///   title: Text('Hello World'),
   ///   description: Text('This is a notification'),
@@ -213,15 +239,15 @@ class Toastification {
   /// ```
   /// TODO(payam): add close button icon parameter
   ToastificationItem show({
-    required BuildContext context,
+    BuildContext? context,
+    OverlayState? overlayState,
     AlignmentGeometry? alignment,
     Duration? autoCloseDuration,
-    OverlayState? overlayState,
+    Duration? animationDuration,
     ToastificationAnimationBuilder? animationBuilder,
     ToastificationType? type,
     ToastificationStyle? style,
     Widget? title,
-    Duration? animationDuration,
     Widget? description,
     Widget? icon,
     Color? primaryColor,
@@ -230,18 +256,30 @@ class Toastification {
     EdgeInsetsGeometry? padding,
     EdgeInsetsGeometry? margin,
     BorderRadiusGeometry? borderRadius,
+    BorderSide? borderSide,
     List<BoxShadow>? boxShadow,
     TextDirection? direction,
     bool? showProgressBar,
     ProgressIndicatorThemeData? progressBarTheme,
+    @Deprecated(
+        'IMPORTANT: The closeButtonShowType parameter is deprecated and will be removed in the next major version. Use the closeButton parameter instead.')
     CloseButtonShowType? closeButtonShowType,
+    ToastCloseButton closeButton = const ToastCloseButton(),
     bool? closeOnClick,
     bool? dragToClose,
+    bool? showIcon,
     DismissDirection? dismissDirection,
     bool? pauseOnHover,
     bool? applyBlurEffect,
     ToastificationCallbacks callbacks = const ToastificationCallbacks(),
   }) {
+    // TODO: remove this variable when the deprecated parameter (closeButtonShowType) is removed
+    var toastCloseButton = closeButton;
+    if (closeButtonShowType != null &&
+        closeButtonShowType != closeButton.showType) {
+      toastCloseButton = closeButton.copyWith(showType: closeButtonShowType);
+    }
+
     return showCustom(
       context: context,
       overlayState: overlayState,
@@ -265,11 +303,13 @@ class Toastification {
           padding: padding,
           margin: margin,
           borderRadius: borderRadius,
+          borderSide: borderSide,
           boxShadow: boxShadow,
           direction: direction,
+          showIcon: showIcon,
           showProgressBar: showProgressBar,
           progressBarTheme: progressBarTheme,
-          closeButtonShowType: closeButtonShowType,
+          closeButton: toastCloseButton,
           closeOnClick: closeOnClick,
           dragToClose: dragToClose,
           dismissDirection: dismissDirection,
@@ -286,7 +326,7 @@ class Toastification {
   /// if there is no notification with the given [id] it will return null
   ToastificationItem? findToastificationItem(String id) {
     try {
-      for (final manager in _managers.values) {
+      for (final manager in managers.values) {
         final foundValue = manager.findToastificationItem(id);
 
         if (foundValue != null) {
@@ -307,7 +347,7 @@ class Toastification {
     ToastificationItem notification, {
     bool showRemoveAnimation = true,
   }) {
-    final manager = _managers[notification.alignment];
+    final manager = managers[notification.alignment];
 
     if (manager != null) {
       manager.dismiss(notification, showRemoveAnimation: showRemoveAnimation);
@@ -319,7 +359,7 @@ class Toastification {
   /// The [delayForAnimation] parameter is used to determine
   /// whether to wait for the animation to finish or not.
   void dismissAll({bool delayForAnimation = true}) {
-    for (final manager in _managers.values) {
+    for (final manager in managers.values) {
       manager.dismissAll(delayForAnimation: delayForAnimation);
     }
   }
