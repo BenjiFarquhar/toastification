@@ -1,3 +1,6 @@
+## 1.2.2
+* Style the simple style toast
+
 ## 1.2.1
 * Enhancement: [Website] Adding Icon Picker Component by @mahmoud-eslami
 
